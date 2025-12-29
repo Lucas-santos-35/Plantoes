@@ -1,13 +1,13 @@
-const CACHE_NAME = 'escala-luxury-v1';
+const CACHE_NAME = 'escala-luxury-v2';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
+  './',
+  './index.html',
+  './manifest.json',
   'https://cdn.tailwindcss.com',
   'https://unpkg.com/lucide@latest'
 ];
 
-// Instalação: Cacheia os ficheiros básicos
+// Instalação: Cacheia os ficheiros básicos usando caminhos relativos
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -41,10 +41,10 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Listener para notificações (permite que o app envie alertas)
+// Listener para notificações
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.openWindow('/')
+    clients.openWindow('./')
   );
 });

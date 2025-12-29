@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prodemge - Escala 12x36 Luxury</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Minha Escala">
+    <meta name="theme-color" content="#d4af37">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1041/1041916.png">
+    
+    <!-- Link para o Manifest Externo -->
+    <link rel="manifest" href="manifest.json">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --gold-primary: #d4af37;
+            --gold-light: #f1e5ac;
+            --silver-primary: #a7a7ad;
+            --silver-light: #e5e7eb;
+            --luxury-black: #1a1a1a;
+            --bg-color: #fdfdfd;
+            --card-bg: #ffffff;
+            --text-main: #1a1a1a;
+            --text-secondary: #64748b;
+            --calendar-border: #e5e7eb;
+        }
+
+        .dark {
+            --bg-color: #0a0a0a;
+            --card-bg: #141414;
+            --text-main: #fdfdfd;
+            --text-secondary: #a1a1aa;
+            --calendar-border: #262626;
+            --silver-light: #262626;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            transition: background-color 0.3s, color 0.3s;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background-color: var(--calendar-border);
+            border: 1px solid var(--calendar-border);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1);
+        }
+
+        .day-cell {
+            background-color: var(--card-bg);
+            aspect-ratio: 1 / 1.3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 10px;
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .day-duty {
+            background: linear-gradient(135deg, var(--card-bg) 0%, var(--gold-light) 100%);
+        }
+        
+        .dark .day-duty {
+            background: linear-gradient(135deg, #141414 0%, #2d2812 100%);
+        }
+
+        .day-duty .day-number { color: var(--gold-primary); font-weight: 700; }
+        .day-off { color: var(--silver-primary); }
+
+        .day-today { border: 1px solid var(--gold-primary); z-index: 10; }
+
+        .label-text {
+            font-size: 0.5rem;
+            text-transform: uppercase;
+            margin-top: 2px;
+            letter-spacing: 0.05em;
+            opacity: 0.7;
+        }
+
+        .day-number { font-size: 1rem; }
+
+        .reminder-indicator {
+            width: 4px;
+            height: 4px;
+            background-color: var(--gold-primary);
+            border-radius: 50%;
+            margin-top: 4px;
+        }
+
+        .nav-btn {
+            display: flex; align-items: center; justify-content: center;
+            width: 36px; height: 36px; border-radius: 50%;
+            border: 1px solid var(--calendar-border);
+            color: var(--text-secondary); transition: all 0.2s;
+        }
+
+        .gold-border-gradient {
+            border: 1px solid transparent;
+            background: linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
+                        linear-gradient(135deg, var(--gold-primary), var(--gold-light)) border-box;
+        }
+
+        /* Modal Styles */
+        #modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 320px;
+            border-radius: 24px;
+            padding: 24px;
+            border: 1px solid var(--gold-primary);
+        }
+
+        .theme-toggle-container {
+            display: flex; align-items: center; justify-content: center;
+            padding: 10px; border-radius: 14px;
+            background: var(--card-bg); border: 1px solid var(--calendar-border);
+            cursor: pointer; transition: all 0.2s;
+        }
+
+        #notif-alert {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--luxury-black);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 12px;
+            z-index: 200;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div id="notif-alert"></div>
+
+    <div class="max-w-md mx-auto min-h-screen flex flex-col px-6 pt-10 relative">
+        
+        <!-- Top Bar -->
+        <div class="flex justify-between items-center mb-8">
+            <div class="theme-toggle-container shadow-sm" onclick="toggleTheme()">
+                <i id="theme-icon" data-lucide="moon" class="w-5 h-5 text-[#d4af37]"></i>
+            </div>
+            <button id="notif-btn" onclick="requestNotificationPermission()" class="text-[10px] font-bold text-[#d4af37] uppercase tracking-widest flex items-center gap-2 border border-[#d4af37] px-3 py-2 rounded-full transition-all">
+                <i data-lucide="bell-off" id="notif-icon" class="w-3 h-3"></i> <span id="notif-text">Ativar Avisos</span>
+            </button>
+        </div>
+
+        <!-- Header -->
+        <header class="flex justify-between items-start mb-10">
+            <div>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.3em] mb-1">Prodemge Platinum</p>
+                <h1 class="text-3xl font-light tracking-tight">Minha <span class="font-bold text-[#d4af37]">Escala</span></h1>
+            </div>
+            <div class="text-right">
+                <p id="current-day-name" class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1">---</p>
+                <p id="current-day-number" class="text-xl font-medium border-b-2 border-[#d4af37]">-- ---</p>
+            </div>
+        </header>
+
+        <!-- Status Card -->
+        <section class="mb-10">
+            <div class="p-6 rounded-[28px] gold-border-gradient shadow-sm flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-3 h-3 rounded-full bg-[#d4af37] shadow-[0_0_8px_#d4af37]"></div>
+                    <div>
+                        <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Status</p>
+                        <h2 id="today-status" class="text-lg font-medium tracking-wide">---</h2>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Próximo</p>
+                    <p id="next-duty-date" class="text-sm font-semibold text-[#b8860b]">--/--</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Calendário -->
+        <section class="flex-grow">
+            <div class="flex items-center justify-between mb-6">
+                <h3 id="current-month" class="text-sm font-bold uppercase tracking-[0.2em]">Janeiro 2024</h3>
+                <div class="flex gap-3">
+                    <button onclick="prevMonth()" class="nav-btn"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                    <button onclick="nextMonth()" class="nav-btn"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-7 mb-4 text-center">
+                <div class="text-[10px] font-black text-[#d4af37] uppercase">Dom</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase">Seg</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase">Ter</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase">Qua</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase">Qui</div>
+                <div class="text-[10px] font-black text-slate-400 uppercase">Sex</div>
+                <div class="text-[10px] font-black text-[#d4af37] uppercase">Sáb</div>
+            </div>
+
+            <div id="calendar-body" class="calendar-grid"></div>
+        </section>
+
+        <footer class="py-8 text-center">
+            <div class="h-[1px] w-12 bg-[#d4af37] mx-auto opacity-30 mb-4"></div>
+            <p class="text-[9px] text-gray-400 uppercase tracking-widest">Toque num dia para lembrete</p>
+        </footer>
+    </div>
+
+    <!-- Modal de Lembrete -->
+    <div id="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h4 id="modal-date-label" class="text-[#d4af37] text-xs font-bold uppercase tracking-widest mb-4">Lembrete</h4>
+            <textarea id="reminder-text" class="w-full h-32 bg-transparent border border-gray-200 dark:border-gray-800 rounded-xl p-3 text-sm focus:outline-none focus:border-[#d4af37] transition-all" placeholder="O que precisa de lembrar neste dia?"></textarea>
+            <div class="flex gap-2 mt-4">
+                <button onclick="saveReminder()" class="flex-1 bg-[#d4af37] text-white py-3 rounded-xl font-bold text-xs uppercase tracking-widest">Salvar</button>
+                <button onclick="closeModal()" class="px-4 py-3 text-gray-400 text-xs font-bold uppercase tracking-widest">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const referenceDate = new Date(2025, 11, 29); // 29 Dez 2025
+        referenceDate.setHours(0,0,0,0);
+
+        let displayDate = new Date();
+        displayDate.setDate(1);
+        let selectedDateKey = null;
+        let reminders = JSON.parse(localStorage.getItem('escala_reminders') || '{}');
+
+        window.onload = () => {
+            updateHeader();
+            renderCalendar();
+            checkNotificationStatus();
+            
+            if (localStorage.getItem('theme') === 'dark') {
+                document.body.classList.add('dark');
+                document.getElementById('theme-icon').setAttribute('data-lucide', 'sun');
+                lucide.createIcons();
+            }
+            
+            setTimeout(checkRemindersOfToday, 1000);
+            
+            // Registo do Service Worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js')
+                    .then(() => console.log('Service Worker Registrado'))
+                    .catch(err => console.log('Falha ao registrar Service Worker', err));
+            }
+        };
+
+        function toggleTheme() {
+            const isDark = document.body.classList.toggle('dark');
+            const icon = document.getElementById('theme-icon');
+            icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+            lucide.createIcons();
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        function updateHeader() {
+            const now = new Date();
+            document.getElementById('current-day-name').innerText = now.toLocaleDateString('pt-br', { weekday: 'long' });
+            document.getElementById('current-day-number').innerText = now.toLocaleDateString('pt-br', { day: 'numeric', month: 'short' });
+        }
+
+        function renderCalendar() {
+            const calendarBody = document.getElementById('calendar-body');
+            const monthTitle = document.getElementById('current-month');
+            const todayStatus = document.getElementById('today-status');
+            const nextDutyEl = document.getElementById('next-duty-date');
+            
+            const today = new Date();
+            today.setHours(0,0,0,0);
+
+            calendarBody.innerHTML = '';
+            let foundNext = false;
+            const month = displayDate.getMonth();
+            const year = displayDate.getFullYear();
+            
+            monthTitle.innerText = displayDate.toLocaleString('pt-br', { month: 'long', year: 'numeric' });
+
+            const firstDayOfMonth = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDayOfMonth; i++) {
+                const empty = document.createElement('div');
+                empty.className = 'day-cell bg-transparent opacity-20';
+                calendarBody.appendChild(empty);
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const dateKey = `${year}-${month + 1}-${day}`;
+                const diffTime = date.getTime() - referenceDate.getTime();
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                const isDuty = diffDays % 2 === 0;
+                
+                if (!foundNext && date > today && isDuty) {
+                    nextDutyEl.innerText = `${day} ${date.toLocaleString('pt-br', { month: 'short' }).toUpperCase()}`;
+                    foundNext = true;
+                }
+
+                const cell = document.createElement('div');
+                cell.className = `day-cell ${isDuty ? 'day-duty' : 'day-off'} ${date.getTime() === today.getTime() ? 'day-today' : ''}`;
+                cell.onclick = () => openModal(dateKey, date.toLocaleDateString('pt-br'));
+                
+                if (date.getTime() === today.getTime()) {
+                    todayStatus.innerText = isDuty ? 'Plantão Ativo' : 'Folga Merecida';
+                }
+
+                const hasReminder = reminders[dateKey];
+
+                cell.innerHTML = `
+                    <span class="day-number">${day}</span>
+                    <span class="label-text text-[8px] sm:text-[10px]">${isDuty ? 'Plantão' : 'Folga'}</span>
+                    ${hasReminder ? '<div class="reminder-indicator"></div>' : ''}
+                `;
+                calendarBody.appendChild(cell);
+            }
+            lucide.createIcons();
+        }
+
+        function openModal(key, label) {
+            selectedDateKey = key;
+            document.getElementById('modal-date-label').innerText = label;
+            document.getElementById('reminder-text').value = reminders[key] || '';
+            document.getElementById('modal-overlay').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+        }
+
+        function saveReminder() {
+            const text = document.getElementById('reminder-text').value;
+            if (text.trim()) {
+                reminders[selectedDateKey] = text;
+            } else {
+                delete reminders[selectedDateKey];
+            }
+            localStorage.setItem('escala_reminders', JSON.stringify(reminders));
+            closeModal();
+            renderCalendar();
+            showAlert("Lembrete guardado com sucesso!");
+        }
+
+        function showAlert(msg) {
+            const el = document.getElementById('notif-alert');
+            el.innerText = msg;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 3000);
+        }
+
+        function checkNotificationStatus() {
+            const btn = document.getElementById('notif-btn');
+            const icon = document.getElementById('notif-icon');
+            const text = document.getElementById('notif-text');
+
+            if (Notification.permission === "granted") {
+                btn.classList.add('bg-[#d4af37]/10');
+                icon.setAttribute('data-lucide', 'bell');
+                text.innerText = "Avisos Ativos";
+            } else if (Notification.permission === "denied") {
+                text.innerText = "Bloqueado";
+                btn.style.opacity = "0.5";
+            }
+            lucide.createIcons();
+        }
+
+        async function requestNotificationPermission() {
+            if (!("Notification" in window)) {
+                showAlert("Navegador não suporta notificações.");
+                return;
+            }
+
+            const permission = await Notification.requestPermission();
+            if (permission === "granted") {
+                new Notification("Escala Prodemge", {
+                    body: "Notificações ativadas! Receberás avisos.",
+                    icon: "https://cdn-icons-png.flaticon.com/512/1041/1041916.png"
+                });
+                checkNotificationStatus();
+            } else {
+                showAlert("Permissão negada.");
+            }
+        }
+
+        function checkRemindersOfToday() {
+            if (Notification.permission !== "granted") return;
+            const now = new Date();
+            const key = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+            if (reminders[key]) {
+                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.ready.then(reg => {
+                        reg.showNotification("Lembrete de Hoje", {
+                            body: reminders[key],
+                            icon: "https://cdn-icons-png.flaticon.com/512/1041/1041916.png"
+                        });
+                    });
+                } else {
+                    new Notification("Lembrete de Hoje", { body: reminders[key] });
+                }
+            }
+        }
+
+        function prevMonth() { displayDate.setMonth(displayDate.getMonth() - 1); renderCalendar(); }
+        function nextMonth() { displayDate.setMonth(displayDate.getMonth() + 1); renderCalendar(); }
+    </script>
+</body>
+</html>

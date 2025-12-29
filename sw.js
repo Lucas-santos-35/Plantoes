@@ -1,5 +1,5 @@
-const CACHE_NAME = 'escala-luxury-v2';
-const ASSETS_TO_CACHE = [
+const CACHE_NAME = 'escala-prodemge-v2';
+const assets = [
   './',
   './index.html',
   './manifest.json',
@@ -7,44 +7,36 @@ const ASSETS_TO_CACHE = [
   'https://unpkg.com/lucide@latest'
 ];
 
-// Instalação: Cacheia os ficheiros básicos usando caminhos relativos
-self.addEventListener('install', (event) => {
+// Instalação e Cache
+self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+    caches.open(CACHE_NAME).then(cache => {
+      console.log('Caching assets...');
+      return cache.addAll(assets);
     })
   );
+  // Força o SW a se tornar ativo imediatamente
   self.skipWaiting();
 });
 
-// Ativação: Limpa caches antigos
-self.addEventListener('activate', (event) => {
+// Limpeza de caches antigos ao ativar
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then(keys => {
       return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            return caches.delete(cache);
-          }
-        })
+        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
       );
     })
   );
+  // Garante que o SW controle as abas abertas imediatamente
+  return self.clients.claim();
 });
 
-// Interceta pedidos para funcionar offline
-self.addEventListener('fetch', (event) => {
+// Estratégia de Cache: Cache First, falling back to Network
+self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request).then((response) => {
+    caches.match(event.request).then(response => {
       return response || fetch(event.request);
     })
-  );
-});
-
-// Listener para notificações
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  event.waitUntil(
-    clients.openWindow('./')
   );
 });
